@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Configure the page encoding -->
+        <meta charset="UTF-8"> 
+
+        <!-- Title of the software -->
+        <title>Quick Screen Share - Screen</title>
+
+        <!-- Load the stylesheet from the main style file -->
+        <link rel="stylesheet" href="/css/style.css"> 
+    </head>
+    
+    <body>
+        <div id="idleScreen">
+            <span id="dispIDLabel">Display ID:</span><br>
+            <span id="dispID"></span>
+        </div>
+
+        <div id="pinScreen" hidden>
+            <span id="pinLabel">PIN:</span><br> 
+            <span id="pin"></span>
+        </div>
+
+        <!-- Video widget -->
+        <video id="playback" autoplay playsinline hidden></video>
+    </body>
+
+    <!-- Footer to show credit to the software and developers -->
+    <footer id="credits">
+        Powered by <a href="https://x.com/ryzerth" target="_blank">Quick Screen Share</a>. Made with ❤️ by <a href="https://x.com/ryzerth" target="_blank">Ryzerth</a>
+    </footer>
+
+    <!-- Main screen code -->
+    <script src="/scripts/screen.js"></script>
+</html>

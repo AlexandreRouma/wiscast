@@ -1,0 +1,139 @@
+/* Debugging */
+body {
+    background: #202025;
+    font-family: Arial;
+    color: white;
+    padding: 0;
+    margin: 0;
+}
+
+#localPlayback {
+    background: black;
+    width: 200%;
+    border-radius: 0.25em;
+    transform: translate(-25%, 0);
+}
+
+#playback {
+    position: fixed;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: black;
+}
+
+#connForm, #pinValForm, #streamForm, #idleScreen, #pinScreen {
+    width: 25em;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+input {
+    /* Sizing */
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.7em;
+
+    /* Border parameters */
+    border-style: solid;
+    border-width: 1px;
+    border-color: #949494;
+    border-radius: 0.25em;
+
+    /* Text parameters */
+    color: black;
+    font-size:medium;
+    text-align:center;
+
+    /* Background parameters */
+    background: #e6e6e6;
+}
+
+button {
+    /* Sizing */
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.7em;
+
+    /* Border parameters */
+    border-style: solid;
+    border-width: 1px;
+    border-color: #2189ff;
+    border-radius: 0.25em;
+
+    /* Text parameters */
+    color: white;
+    font-size:medium;
+    text-align:center;
+
+    /* Background parameters */
+    background: #1080FF;
+
+    /* Cursor parameters */
+    cursor:pointer;
+}
+
+button:hover {
+    /* Background parameters */
+    background: #2189ff;
+}
+
+button:active {
+    /* Background parameters */
+    background: #2b8eff;
+}
+
+button:disabled {
+    /* Border parameters */
+    border-color: #797979;
+
+    /* Text parameters */
+    color: rgb(145, 145, 145);
+
+    /* Background parameters */
+    background: #5f5f5f;
+
+    /* Cursor parameters */
+    cursor: not-allowed;
+}
+
+.TV {
+    font-size: 80pt;
+    margin: 0;
+    width: 100%;
+    text-align: center;
+}
+
+footer {
+    /* Text parameters */
+    color: white;
+    font-size:small;
+
+    /* Position */
+    position: absolute;
+    bottom: 0;
+    right: 0;
+
+    /* Margins */
+    margin: 0.5em;
+}
+
+a {
+    color: #1080FF;
+    text-decoration: none;
+}
+
+h1 {
+    text-align: center;
+}
+
+#dispIDLabel, #pinLabel {
+    font-size: 30pt;
+}
+
+#dispID, #pin {
+    font-size: 80pt;
+}

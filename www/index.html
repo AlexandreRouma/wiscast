@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Configure the page encoding -->
+        <meta charset="UTF-8"> 
+
+        <!-- Title of the software -->
+        <title>Quick Screen Share</title>
+
+        <!-- Load the stylesheet from the main style file -->
+        <link rel="stylesheet" href="/css/style.css"> 
+    </head>
+
+    <body>
+        <!-- Connection form -->
+        <div id="connForm">
+            <p class="TV">📺</p><br>
+            <input type="text" id="dispName" placeholder="Display ID" required autocomplete="off" oninput="onDispNameChange()"><br><br>
+            <input type="text" id="otp" placeholder="OTP" required autocomplete="off" oninput="onOTPChange()"><br><br>
+            <button id="connect" onclick="connect()" disabled autocomplete="off">Connect</button>
+        </div>
+
+        <!-- Streaming form -->
+        <div id="streamForm" hidden>
+            <h1>You are live!</h1>
+            <video id="localPlayback" autoplay playsinline></video><br><br>
+            <button id="disconnect" onclick="disconnect()">Disconnect</button>
+        </div>
+    </body>
+
+    <!-- Footer to show credit to the software and developers -->
+    <footer>
+        Powered by <a href="https://x.com/ryzerth" target="_blank">Quick Screen Share</a>. Made with ❤️ by <a href="https://x.com/ryzerth" target="_blank">Ryzerth</a>
+    </footer>
+
+    <!-- Main client code -->
+    <script src="/scripts/client.js"></script>
+</html>
