@@ -1,29 +1,27 @@
 package main
 
 // Packages
-//import "log"
-import "github.com/gorilla/websocket"
-//import "encoding/json"
+import "log"
 import "sync"
+import "net/http"
+import "github.com/gorilla/websocket"
 
 // General client instance
 type User struct {
 	// WebSocket used to communicate with the user
-	sock *websocket.Conn
+	sock *websocket.Conn;
 
 	// Display mutex
-	displayMtx sync.Mutex
+	displayMtx sync.Mutex;
 
 	// Display that the user is connecting to
-	display *Display
+	display *Display;
 }
-
-// TODO: Check type
 
 // Connection handler for users
 func userHandler(sock *websocket.Conn) {
 	// Initialize the user instance
-	user := User{ sock: sock, display: nil }
+	user := User{ sock: sock, display: nil };
 
 	// Send back the config for the user to use
 	sendMessage(sock, Message{
@@ -32,110 +30,116 @@ func userHandler(sock *websocket.Conn) {
 			"timeout": CONF_TIMEOUT_MS,
 			"iceServers": CONF_ICE_SERVERS,
 		},
-	})
+	});
 
 	// Message loop
 	for {
 		// Receive a message
-		msg := recvMessage(sock, 0)
+		msg, err := recvMessage(sock, 0);
 
-		// TODO: exit on error
+		// Give up on the connection if there was an error
+		if (err != nil) { break; }
 
 		// Handle the message depending on its type
 		switch msg.mtype {
 		case "connect":
 			// Check that a display ID was provided
-			if msg.arguments["dispID"] == nil {
-				sendErrorMessage(sock, "Missing display ID")
-				continue;
-			}
+			dispID, valid := msg.arguments["dispID"].(string)
+			if (!valid) { break; }
 
 			// Check that an OTP was provided
-			if msg.arguments["otp"] == nil {
-				sendErrorMessage(sock, "Missing OTP")
-				continue;
-			}
+			otp, valid := msg.arguments["otp"].(string)
+			if (!valid) { break; }
 
 			// Acquire the display ID list
-			displaysLck.Lock()
+			displaysLck.Lock();
 
 			// Check that the display ID exists
-			dispID := msg.arguments["dispID"].(string)
-			if displays[dispID] == nil {
+			if (displays[dispID] == nil) {
 				// Release the display list
-				displaysLck.Unlock()
+				displaysLck.Unlock();
 
 				// Send back an error
-				sendErrorMessage(sock, "Unknown display")
+				sendErrorMessage(sock, http.StatusNotFound);
 				continue;
 			}
+
+			// Acquire the displays OTP
+			displays[dispID].otpMtx.Lock();
 
 			// Check the OTP
-			otp := msg.arguments["otp"].(string)
-			if otp == "" || otp != displays[dispID].otp {
+			if (otp == "" || otp != displays[dispID].otp) {
+				// Release the display's OTP
+				displays[dispID].otpMtx.Unlock();
+
 				// Release the display list
-				displaysLck.Unlock()
+				displaysLck.Unlock();
 
 				// Send back an error
-				sendErrorMessage(sock, "Invalid OTP")
+				sendErrorMessage(sock, http.StatusUnauthorized);
 				continue;
 			}
 
-			// TODO: Check types
+			// Release the display's OTP
+			displays[dispID].otpMtx.Unlock();
 
 			// Acquire the user's display pointer
-			user.displayMtx.Lock()
+			user.displayMtx.Lock();
 
 			// Register the user and display to each other
-			user.display = displays[dispID]
-			user.display.user = &user
+			user.display = displays[dispID];
+			user.display.user = &user;
 
 			// Put the display into streaming mode
-			user.display.stream()
+			user.display.stream();
 
 			// TODO: Check for error
 		
 			// Release the user's display pointer
-			user.displayMtx.Lock()
+			user.displayMtx.Lock();
 
 			// Release the display list
-			displaysLck.Unlock()
+			displaysLck.Unlock();
+
+			// Log the connection
+			log.Println("User successfully connected to display: ID='", dispID, "'");
 
 			// Notify the user of the successful connection
 			sendMessage(sock, Message{
 				mtype: "success",
-			})
+			});
 
 		case "webrtc-offer":
 			// Check that the message contains an offer
-			if msg.arguments["offer"] == nil {
-				// Send back an error
-				sendErrorMessage(sock, "No offer given")
-				continue;
-			}
-
-			// TODO: Check type
+			offer, valid := msg.arguments["offer"].(string)
+			if (!valid) { break; }
 
 			// Acquire the user's display pointer
-			user.displayMtx.Lock()
+			user.displayMtx.Lock();
 
 			// Check that the user is connected to a display
-			if user.display == nil {
+			if (user.display == nil) {
 				// Release the user's display pointer
-				user.displayMtx.Unlock()
+				user.displayMtx.Unlock();
 
 				// Send back an error
-				sendErrorMessage(sock, "Not connected")
+				sendErrorMessage(sock, http.StatusForbidden);
 				continue;
 			}
 
 			// Send the offer to the display and get the response
-			answer := user.display.webRTCOffer(msg.arguments["offer"].(string), CONF_TIMEOUT_MS)
+			answer, err := user.display.webRTCOffer(offer, CONF_TIMEOUT_MS);
+			if (err != nil) {
+				// Release the user's display pointer
+				user.displayMtx.Unlock();
 
-			// TODO: Check for error
+				// Send back an error
+				sendErrorMessage(sock, http.StatusBadGateway);
+				continue;
+			}
 
 			// Release the user's display pointer
-			user.displayMtx.Unlock()
+			user.displayMtx.Unlock();
 
 			// Send back the response
 			sendMessage(sock, Message{
@@ -143,42 +147,39 @@ func userHandler(sock *websocket.Conn) {
 				arguments: map[string]interface{}{
 					"answer": answer,
 				},
-			})
+			});
 
 		case "ice-candidate":
 			// Check that the message contains an ice candidate
-			if msg.arguments["candidate"] == nil {
-				// Send back an error
-				sendErrorMessage(sock, "No offer given")
-				continue;
-			}
-
-			// TODO: Check type
+			candidate, valid := msg.arguments["candidate"].(string)
+			if (!valid) { break; }
 
 			// Acquire the user's display pointer
-			user.displayMtx.Lock()
+			user.displayMtx.Lock();
 
 			// Check that the user is connected to a display
-			if user.display == nil {
+			if (user.display == nil) {
 				// Release the user's display pointer
-				user.displayMtx.Unlock()
+				user.displayMtx.Unlock();
 
 				// Send back an error
-				sendErrorMessage(sock, "Not connected")
+				sendErrorMessage(sock, http.StatusForbidden);
 				continue;
 			}
 
 			// Send the ice candidtate to the display
-			user.display.iceCandidate(msg.arguments["candidate"].(string))
+			user.display.iceCandidate(candidate);
+
+			// TODO: Check error
 
 			// Release the user's display pointer
-			user.displayMtx.Unlock()
+			user.displayMtx.Unlock();
 
 		default:
-			// Send back an error
-			sendErrorMessage(sock, "Invalid message type")
+			// Give up
+			break;
 		}
 	}
 
-	// If the user was connected to a display, disconnect it
+	// TODO: Gracefull disconnect the connected display if there is one
 }

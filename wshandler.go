@@ -21,7 +21,10 @@ func wsHandler(respWriter http.ResponseWriter, req *http.Request) {
 	defer sock.Close()
 
 	// Receive the init message
-	msg := recvMessage(sock, 5000)
+	msg, err := recvMessage(sock, 5000)
+
+	// If there was an error or timeout, give up on the connection
+	if err != nil { return }
 
 	// If it's not an init message, give up
 	if msg.mtype != "init" { return }
@@ -34,9 +37,14 @@ func wsHandler(respWriter http.ResponseWriter, req *http.Request) {
 
 	case "display":
 		// Check that the display has provided its ID
-		if msg.arguments["dispID"] == nil { return }
+		dispID, valid := msg.arguments["dispID"].(string)
+		if !valid { return }
+
+		// Check that the display has provided its OTP
+		otp, valid := msg.arguments["otp"].(string)
+		if !valid { return }
 		
 		// Handle as a display
-		displayHandler(sock, msg.arguments["dispID"].(string))
+		displayHandler(sock, dispID, otp)
 	}
 }

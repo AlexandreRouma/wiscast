@@ -14,9 +14,9 @@ func main() {
 	http.Handle("/", static)
 
 	// Create a handler for the signaling backend
-	// http.HandleFunc("/sig", wsHandler)
+	http.HandleFunc("/sig", wsHandler)
 
 	// Run the server
 	err := http.ListenAndServe(":3000", nil)
-	if( err != nil) { log.Fatal(err) }
+	if (err != nil) { log.Fatal(err) }
 }
