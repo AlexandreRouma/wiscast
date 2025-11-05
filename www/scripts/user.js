@@ -77,6 +77,7 @@ class WisCastUserAPIClient {
 
             // Send a heart-beat message every 30 seconds
             setInterval(async () => {
+                console.log("Sending a heart beat");
                 await this.#sock.send(JSON.stringify({
                     type: 'hb',
                 }))
