@@ -223,6 +223,9 @@ func userHandler(sock *websocket.Conn) {
 			// Release the user's display pointer
 			user.displayMtx.Unlock();
 
+		case "hb":
+			// Nothing to do, just a heart beat...
+
 		default:
 			// Give up
 			break;

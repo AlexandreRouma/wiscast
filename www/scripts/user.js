@@ -74,6 +74,13 @@ class WisCastUserAPIClient {
                 dispID: dispID,
                 otp: OTP
             }))
+
+            // Send a heart-beat message every 30 seconds
+            setInterval(async () => {
+                await this.#sock.send(JSON.stringify({
+                    type: 'hb',
+                }))
+            }, 30000);
         });
     }
 
