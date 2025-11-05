@@ -11,18 +11,21 @@ import "github.com/gorilla/websocket"
 // Display instance
 type Display struct {
 	// WebSocket used to communicate with the display
-	sock *websocket.Conn
-	sockSendMtx sync.Mutex
+	sock *websocket.Conn;
+	sockSendMtx sync.Mutex;
+
+	// User mutex
+	userMtx sync.Mutex;
 
 	// User currently connected to the display
-	user *User
+	user *User;
 
 	// One-time-pass currently shown on the display
-	otpMtx sync.Mutex
-	otp string
+	otpMtx sync.Mutex;
+	otp string;
 
 	// Channel to pass the answer from the display coroutine to the user couroutine
-	answerCh chan string
+	answerCh chan string;
 }
 
 // Helper function to flush channels
@@ -50,7 +53,7 @@ func chReadTimeout(ch *chan string, timeoutMS int) (string, error) {
 		return data, nil
 	
 	// If no data has been received and the timeout is reached, return an error
-	case <-time.After(timeoutMS * time.Millisecond):
+	case <-time.After(time.Millisecond * time.Duration(timeoutMS)):
 		return "", errors.New("timeout")
 	}
 }
@@ -206,7 +209,28 @@ func displayHandler(sock *websocket.Conn, dispID string, otp string) {
 			disp.answerCh <- answer
 
 		case "ice-candidate":
-			// TODO
+			// Check that the message contains an ice candidate
+			candidate, valid := msg.arguments["candidate"].(string)
+			if (!valid) { break; }
+
+			// Acquire the user's display pointer
+			disp.userMtx.Lock();
+
+			// Check that a user is connected to a display
+			if (disp.user == nil) {
+				// Release the user's display pointer
+				disp.userMtx.Unlock();
+
+				// Send back an error
+				sendErrorMessage(sock, http.StatusForbidden);
+				continue;
+			}
+
+			// Send the ice candidtate to the display
+			disp.user.iceCandidate(candidate);
+
+			// Release the user's display pointer
+			disp.userMtx.Unlock();
 
 		default:
 			// Give up

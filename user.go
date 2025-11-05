@@ -10,12 +10,30 @@ import "github.com/gorilla/websocket"
 type User struct {
 	// WebSocket used to communicate with the user
 	sock *websocket.Conn;
+	sockSendMtx sync.Mutex;
 
 	// Display mutex
 	displayMtx sync.Mutex;
 
 	// Display that the user is connecting to
 	display *Display;
+}
+
+// Send an ICE candiate to the user
+func (this *User) iceCandidate(candidate string) {
+	// Acquire the sending mutex
+	this.sockSendMtx.Lock()
+	
+	// Send the candidate
+	sendMessage(this.sock, Message{
+		mtype: "ice-candidate",
+		arguments: map[string]interface{}{
+			"candidate": candidate,
+		},
+	})
+
+	// Release the sending mutex
+	this.sockSendMtx.Unlock()
 }
 
 // Connection handler for users
@@ -169,8 +187,6 @@ func userHandler(sock *websocket.Conn) {
 
 			// Send the ice candidtate to the display
 			user.display.iceCandidate(candidate);
-
-			// TODO: Check error
 
 			// Release the user's display pointer
 			user.displayMtx.Unlock();
