@@ -154,6 +154,9 @@ func displayHandler(sock *websocket.Conn, dispID string, otp string) {
 
 		// Release the sending mutex
 		disp.sockSendMtx.Unlock()
+
+		// Give up
+		return;
 	}
 
 	// Add the display to the list
