@@ -25,32 +25,32 @@ type Display struct {
 	otp string;
 
 	// Channel to pass the answer from the display coroutine to the user couroutine
-	answerCh chan string;
+	answerCh chan interface{};
 }
 
 // Helper function to flush channels
-func chFlush(ch *chan string) {
+func chFlush(ch *chan interface{}) {
 	for {
-		empty := false
+		empty := false;
 		select {
 		// If data is available, read it and try again
-		case <-*ch:
-			continue
+		case <-(*ch):
+			continue;
 		
 		// If no data is available, stop reading
 		default:
-			empty = true
+			empty = true;
 		}
-		if empty { break }
+		if empty { break; }
 	}
 }
 
 // Helper function to read from a channel with a timeout
-func chReadTimeout(ch *chan string, timeoutMS int) (string, error) {
+func chReadTimeout(ch *chan interface{}, timeoutMS int) (interface{}, error) {
 	select {
 	// If data is available, return it with no error
-	case data := <-*ch:
-		return data, nil
+	case data := <-(*ch):
+		return data, nil;
 	
 	// If no data has been received and the timeout is reached, return an error
 	case <-time.After(time.Millisecond * time.Duration(timeoutMS)):
@@ -91,7 +91,7 @@ func (this *Display) stream() {
 }
 
 // Send a WebRTC offer to the display and get an answer
-func (this *Display) webRTCOffer(offer string, timeoutMS int) (string, error) {
+func (this *Display) sendWebRTCOffer(offer interface{}, timeoutMS int) (interface{}, error) {
 	// Flush the answer channel
 	chFlush(&this.answerCh)
 
@@ -116,7 +116,7 @@ func (this *Display) webRTCOffer(offer string, timeoutMS int) (string, error) {
 }
 
 // Send an ICE candiate to the display
-func (this *Display) iceCandidate(candidate string) {
+func (this *Display) sendIceCandidate(candidate interface{}) {
 	// Acquire the sending mutex
 	this.sockSendMtx.Lock()
 	
@@ -136,6 +136,7 @@ func (this *Display) iceCandidate(candidate string) {
 func displayHandler(sock *websocket.Conn, dispID string, otp string) {
 	// Create the display object
 	disp := Display{ sock: sock, otp: otp }
+	disp.answerCh = make(chan interface{});
 
 	// Acquire the sending mutex
 	disp.sockSendMtx.Lock()
@@ -165,53 +166,57 @@ func displayHandler(sock *websocket.Conn, dispID string, otp string) {
 	sendMessage(sock, Message{
 		mtype: "config",
 		arguments: map[string]interface{}{
-			"timeout": CONF_TIMEOUT_MS,
-			"iceServers": CONF_ICE_SERVERS,
+			"config": map[string]interface{}{
+				"otpLifespan": CONF_OTP_LIFESPAN_MS,
+				"timeout": CONF_TIMEOUT_MS,
+				"iceServers": CONF_ICE_SERVERS,
+			},
 		},
 	})
 
 	// Release the sending mutex
-	disp.sockSendMtx.Unlock()
+	disp.sockSendMtx.Unlock();
 
 	// Log the new display
-	log.Println("New display: ID='" + dispID + "', OTP='" + otp + "'")
+	log.Println("New display: ID='" + dispID + "', OTP='" + otp + "'");
 
 	// Message loop
 	for {
 		// Receive a message
-		msg, err := recvMessage(sock, 0)
+		msg, err := recvMessage(sock, 0);
 
 		// Give up on the connection if there was an error
-		if (err != nil) { break }
+		if (err != nil) { break; }
 
 		// Handle the message depending on its type
 		switch msg.mtype {
 		case "otp":
 			// Check that the message contains an OTP
-			otp, valid := msg.arguments["otp"].(string)
-			if (!valid) { break }
+			otp, valid := msg.arguments["otp"].(string);
+			if (!valid) { break; }
 
 			// Acquire the display's OTP
-			disp.otpMtx.Lock()
+			disp.otpMtx.Lock();
 
 			// Update the OTP
-			disp.otp = otp
+			disp.otp = otp;
+			log.Println("New OTP for ID='" + dispID + "': OTP='" + otp + "'");
 
 			// Release the display's OTP
-			disp.otpMtx.Unlock()
+			disp.otpMtx.Unlock();
 
-		case "answer":
+		case "webrtc-answer":
 			// Check that the message contains an answer
-			answer, valid := msg.arguments["answer"].(string)
-			if (!valid) { break }
+			answer := msg.arguments["answer"];
+			if (answer == nil) { break; }
 
 			// Send the answer through the display's answer channel
-			disp.answerCh <- answer
+			disp.answerCh <- answer;
 
 		case "ice-candidate":
 			// Check that the message contains an ice candidate
-			candidate, valid := msg.arguments["candidate"].(string)
-			if (!valid) { break; }
+			candidate := msg.arguments["candidate"];
+			if (candidate == nil) { break; }
 
 			// Acquire the user's display pointer
 			disp.userMtx.Lock();
@@ -238,5 +243,12 @@ func displayHandler(sock *websocket.Conn, dispID string, otp string) {
 		}
 	}
 
-	// TODO: Gracefull disconnect the connected user if there is one
+	// Acquire the display list
+	displaysLck.Lock();
+
+	// Remove the display from the list
+	delete(displays, dispID);
+
+	// Release the display list
+	displaysLck.Unlock();
 }

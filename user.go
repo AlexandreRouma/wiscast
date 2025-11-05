@@ -19,8 +19,20 @@ type User struct {
 	display *Display;
 }
 
+// Send an error to the user
+func (this *User) error(err int) {
+	// Acquire the sending mutex
+	this.sockSendMtx.Lock()
+	
+	// Send the error
+	sendErrorMessage(this.sock, http.StatusNotFound);
+
+	// Release the sending mutex
+	this.sockSendMtx.Unlock()
+}
+
 // Send an ICE candiate to the user
-func (this *User) iceCandidate(candidate string) {
+func (this *User) iceCandidate(candidate interface{}) {
 	// Acquire the sending mutex
 	this.sockSendMtx.Lock()
 	
@@ -45,8 +57,10 @@ func userHandler(sock *websocket.Conn) {
 	sendMessage(sock, Message{
 		mtype: "config",
 		arguments: map[string]interface{}{
-			"timeout": CONF_TIMEOUT_MS,
-			"iceServers": CONF_ICE_SERVERS,
+			"config": map[string]interface{}{
+				"timeout": CONF_TIMEOUT_MS,
+				"iceServers": CONF_ICE_SERVERS,
+			},
 		},
 	});
 
@@ -114,13 +128,13 @@ func userHandler(sock *websocket.Conn) {
 			// TODO: Check for error
 		
 			// Release the user's display pointer
-			user.displayMtx.Lock();
+			user.displayMtx.Unlock();
 
 			// Release the display list
 			displaysLck.Unlock();
 
 			// Log the connection
-			log.Println("User successfully connected to display: ID='", dispID, "'");
+			log.Println("User successfully connected to display: ID='" + dispID + "'");
 
 			// Notify the user of the successful connection
 			sendMessage(sock, Message{
@@ -129,8 +143,8 @@ func userHandler(sock *websocket.Conn) {
 
 		case "webrtc-offer":
 			// Check that the message contains an offer
-			offer, valid := msg.arguments["offer"].(string)
-			if (!valid) { break; }
+			offer := msg.arguments["offer"];
+			if (offer == nil) { break; }
 
 			// Acquire the user's display pointer
 			user.displayMtx.Lock();
@@ -146,7 +160,7 @@ func userHandler(sock *websocket.Conn) {
 			}
 
 			// Send the offer to the display and get the response
-			answer, err := user.display.webRTCOffer(offer, CONF_TIMEOUT_MS);
+			answer, err := user.display.sendWebRTCOffer(offer, CONF_TIMEOUT_MS);
 			if (err != nil) {
 				// Release the user's display pointer
 				user.displayMtx.Unlock();
@@ -169,8 +183,8 @@ func userHandler(sock *websocket.Conn) {
 
 		case "ice-candidate":
 			// Check that the message contains an ice candidate
-			candidate, valid := msg.arguments["candidate"].(string)
-			if (!valid) { break; }
+			candidate := msg.arguments["candidate"]
+			if (candidate == nil) { break; }
 
 			// Acquire the user's display pointer
 			user.displayMtx.Lock();
@@ -186,7 +200,7 @@ func userHandler(sock *websocket.Conn) {
 			}
 
 			// Send the ice candidtate to the display
-			user.display.iceCandidate(candidate);
+			user.display.sendIceCandidate(candidate);
 
 			// Release the user's display pointer
 			user.displayMtx.Unlock();
@@ -197,5 +211,20 @@ func userHandler(sock *websocket.Conn) {
 		}
 	}
 
-	// TODO: Gracefull disconnect the connected display if there is one
+	// Acquire the user's display pointer
+	user.displayMtx.Lock();
+
+	// The user is associated with a display
+	if (user.display != nil) {
+		log.Println("User disconnecting from display");
+
+		// Disassociate the user from the display
+		user.display.user = nil;
+
+		// Reset the display
+		user.display.reset();
+	}
+
+	// Release the user's display pointer
+	user.displayMtx.Unlock();
 }

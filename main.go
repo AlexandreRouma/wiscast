@@ -18,5 +18,6 @@ func main() {
 
 	// Run the server
 	err := http.ListenAndServe(":3000", nil)
+	// err := http.ListenAndServeTLS(":3443", ".old/fullchain.pem", ".old/privkey.pem", nil);
 	if (err != nil) { log.Fatal(err) }
 }

@@ -15,16 +15,16 @@
         <!-- Connection form -->
         <div id="connForm">
             <p class="TV">📺</p><br>
-            <input type="text" id="dispName" placeholder="Display ID" required autocomplete="off"><br><br>
-            <input type="text" id="otp" placeholder="OTP" required autocomplete="off"><br><br>
-            <button id="connect" disabled autocomplete="off">Connect</button>
+            <input type="text" id="dispIDTb" placeholder="Display Name" required autocomplete="off"><br><br>
+            <input type="text" id="dispOTPTb" placeholder="OTP" required autocomplete="off" maxlength="6"><br><br>
+            <button id="connectBtn" disabled autocomplete="off">Connect</button>
         </div>
 
         <!-- Streaming form -->
         <div id="streamForm" hidden>
             <h1>You are live!</h1>
             <video id="localPlayback" autoplay playsinline></video><br><br>
-            <button id="disconnect">Disconnect</button>
+            <button id="disconnectBtn">Disconnect</button>
         </div>
     </body>
 

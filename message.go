@@ -1,9 +1,11 @@
 package main
 
+// Packages
 import "encoding/json"
 import "errors"
 import "time"
 import "github.com/gorilla/websocket"
+//import "log"
 
 // Backend message object
 type Message struct {
