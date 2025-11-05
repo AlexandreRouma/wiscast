@@ -53,6 +53,9 @@ func userHandler(sock *websocket.Conn) {
 	// Initialize the user instance
 	user := User{ sock: sock, display: nil };
 
+	// Acquire the sending mutex
+	user.sockSendMtx.Lock()
+
 	// Send back the config for the user to use
 	sendMessage(sock, Message{
 		mtype: "config",
@@ -63,6 +66,9 @@ func userHandler(sock *websocket.Conn) {
 			},
 		},
 	});
+
+	// Release the sending mutex
+	user.sockSendMtx.Unlock()
 
 	// Message loop
 	for {
@@ -136,10 +142,16 @@ func userHandler(sock *websocket.Conn) {
 			// Log the connection
 			log.Println("User successfully connected to display: ID='" + dispID + "'");
 
+			// Acquire the sending mutex
+			user.sockSendMtx.Lock()
+
 			// Notify the user of the successful connection
 			sendMessage(sock, Message{
 				mtype: "success",
 			});
+
+			// Release the sending mutex
+			user.sockSendMtx.Unlock()
 
 		case "webrtc-offer":
 			// Check that the message contains an offer
@@ -173,6 +185,9 @@ func userHandler(sock *websocket.Conn) {
 			// Release the user's display pointer
 			user.displayMtx.Unlock();
 
+			// Acquire the sending mutex
+			user.sockSendMtx.Lock()
+
 			// Send back the response
 			sendMessage(sock, Message{
 				mtype: "webrtc-answer",
@@ -180,6 +195,9 @@ func userHandler(sock *websocket.Conn) {
 					"answer": answer,
 				},
 			});
+
+			// Release the sending mutex
+			user.sockSendMtx.Unlock()
 
 		case "ice-candidate":
 			// Check that the message contains an ice candidate
